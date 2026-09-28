@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¡Formamos Oraciones! - 1° de Primaria</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Google Fonts: Fredoka & Nunito for child-friendly typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fredoka: ['Fredoka', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            brandYellow: '#FFDE59',
+            brandOrange: '#FF914D',
+            brandBlue: '#00C2CB',
+            brandPurple: '#8C52FF',
+            brandPink: '#FF66C4',
+            brandGreen: '#7ED957'
+          },
+          animation: {
+            bounceSlow: 'bounce 2s infinite',
+            wiggle: 'wiggle 0.3s ease-in-out infinite',
+            pop: 'pop 0.3s ease-out'
+          },
+          keyframes: {
+            wiggle: {
+              '0%, 100%': { transform: 'rotate(-3deg)' },
+              '50%': { transform: 'rotate(3deg)' },
+            },
+            pop: {
+              '0%': { transform: 'scale(0.8)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Fredoka', sans-serif;
+      background-color: #f0fdf4;
+      background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .word-card {
+      touch-action: manipulation;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .word-card:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .drop-zone {
+      min-height: 85px;
+      border: 3px dashed #cbd5e1;
+      transition: all 0.2s ease;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #8C52FF;
+      background-color: #f3e8ff;
+    }
+
+    .btn-3d {
+      box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.2);
+      transition: all 0.1s ease;
+    }
+
+    .btn-3d:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Floating stars background */
+    .star-bg {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0.15;
+      animation: float 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-20px) rotate(15deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 sm:p-4 text-slate-800 overflow-x-hidden">
+
+  <!-- Floating background decorative elements -->
+  <div class="star-bg top-10 left-10 text-6xl text-yellow-400">⭐</div>
+  <div class="star-bg top-20 right-12 text-6xl text-purple-400" style="animation-delay: 2s;">🎈</div>
+  <div class="star-bg bottom-10 left-16 text-6xl text-pink-400" style="animation-delay: 4s;">🎨</div>
+
+  <!-- Header Section -->
+  <header class="w-full max-w-5xl mx-auto bg-white rounded-3xl p-4 shadow-xl border-4 border-yellow-300 relative z-10 my-2">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Title & Mascot -->
+      <div class="flex items-center gap-3">
+        <div class="w-14 h-14 bg-gradient-to-tr from-brandYellow to-brandOrange rounded-2xl flex items-center justify-center text-3xl shadow-md border-2 border-white">
+          ✏️
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-brandPurple leading-tight flex flex-wrap items-baseline gap-x-2">
+            <span>¡Formamos Oraciones!</span>
+            <span class="text-lg sm:text-2xl font-bold text-brandOrange">con el profesor Carlos Fernando</span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- Game Stats Bar -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+        <!-- Question Counter -->
+        <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-2xl border-2 border-blue-300 flex items-center gap-2 font-bold text-lg">
+          <span>🧩 Ejercicio:</span>
+          <span id="current-question-num" class="text-2xl text-blue-600">1</span>
+          <span>/ 30</span>
+        </div>
+
+        <!-- Score Badge -->
+        <div class="bg-amber-100 text-amber-900 px-5 py-2 rounded-2xl border-2 border-amber-300 flex items-center gap-2 font-black text-xl shadow-inner">
+          <span class="text-2xl animate-bounce">⭐</span>
+          <span>Puntos:</span>
+          <span id="score-display" class="text-3xl text-amber-600">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="w-full bg-slate-100 h-4 rounded-full mt-3 overflow-hidden border border-slate-200">
+      <div id="progress-bar" class="bg-gradient-to-r from-brandGreen via-brandBlue to-brandPurple h-full w-0 transition-all duration-500 rounded-full"></div>
+    </div>
+  </header>
+
+  <!-- MAIN CARD AREA (Each Exercise dynamic slide) -->
+  <main class="w-full max-w-5xl mx-auto flex-1 flex flex-col justify-center my-2 relative z-10">
+    <div id="exercise-card" class="bg-white rounded-3xl p-4 sm:p-8 shadow-2xl border-4 border-brandBlue/30 flex flex-col gap-6 relative overflow-hidden">
+      
+      <!-- Graphic/Image Header for Exercise -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 bg-gradient-to-r from-sky-50 via-purple-50 to-pink-50 p-4 sm:p-6 rounded-2xl border-2 border-slate-100 shadow-inner">
+        <div id="illustration-container" class="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center bg-white rounded-2xl p-2 shadow-md border-2 border-brandYellow transform hover:scale-105 transition-transform duration-300">
+          <!-- Dynamic SVG illustration will be inserted here -->
+        </div>
+        <div class="text-center sm:text-left">
+          <span class="bg-brandPurple/10 text-brandPurple px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider">
+            Ordena las palabras
+          </span>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-700 mt-1">
+            Arrastra o toca las palabras para armar la oración correcta:
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            💡 Puedes hacer clic en una palabra para moverla arriba o abajo.
+          </p>
+        </div>
+      </div>
+
+      <!-- Sentence Target Area (Drop Zone) -->
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-between items-center px-1">
+          <label class="text-base sm:text-lg font-bold text-slate-600 flex items-center gap-2">
+            <span>🚩 Tu oración:</span>
+          </label>
+          <button id="clear-btn" onclick="resetCurrentSentence()" class="text-sm font-bold text-slate-500 hover:text-red-500 underline flex items-center gap-1 transition-colors">
+            <span>🔄 Reiniciar palabras</span>
+          </button>
+        </div>
+
+        <div id="target-zone" class="drop-zone w-full p-3 sm:p-4 rounded-2xl bg-slate-50 flex flex-wrap gap-2 sm:gap-3 items-center justify-center min-h-[100px] border-3 border-dashed border-slate-300 shadow-inner">
+          <p id="placeholder-text" class="text-slate-400 font-semibold text-base sm:text-xl pointer-events-none italic">
+            Pon las palabras aquí en orden... 🧩
+          </p>
+        </div>
+      </div>
+
+      <!-- Word Source Bank Area -->
+      <div class="flex flex-col gap-2">
+        <label class="text-base sm:text-lg font-bold text-slate-600 px-1">
+          <span>📦 Banco de palabras desordenadas:</span>
+        </label>
+        
+        <div id="source-zone" class="drop-zone w-full p-4 sm:p-6 rounded-2xl bg-amber-50/60 flex flex-wrap gap-2 sm:gap-4 items-center justify-center min-h-[110px] border-2 border-amber-200">
+          <!-- Scrambled word tokens will be generated here dynamically -->
+        </div>
+      </div>
+
+      <!-- Feedback Banner (Hidden by default) -->
+      <div id="feedback-banner" class="hidden p-4 rounded-2xl text-center font-extrabold text-xl sm:text-2xl animate-pop border-2">
+        <!-- Text dynamically set on validation -->
+      </div>
+
+      <!-- Action Buttons Area -->
+      <div class="flex flex-col sm:flex-row gap-4 items-center justify-center pt-2">
+        <!-- Validate Button -->
+        <button id="validate-btn" onclick="validateAnswer()" class="btn-3d w-full sm:w-auto px-8 py-4 bg-brandGreen hover:bg-emerald-500 text-white text-xl font-black rounded-2xl flex items-center justify-center gap-3 border-2 border-green-600 cursor-pointer">
+          <span>✔ Comprobar Respuesta</span>
+        </button>
+
+        <!-- Next Exercise Button (Disabled until validated or clicked) -->
+        <button id="next-btn" onclick="nextExercise()" class="btn-3d w-full sm:w-auto px-8 py-4 bg-brandBlue hover:bg-cyan-600 text-white text-xl font-black rounded-2xl flex items-center justify-center gap-3 border-2 border-cyan-700 cursor-pointer">
+          <span>Siguiente Ejercicio ➡️</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- GAME OVER / RESULTS MODAL -->
+  <div id="results-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-50 p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 sm:p-10 max-w-lg w-full text-center shadow-2xl border-4 border-brandYellow animate-pop flex flex-col items-center gap-4">
+      <div class="text-7xl animate-bounceSlow">🏆</div>
+      <h2 class="text-3xl sm:text-4xl font-black text-brandPurple">
+        ¡Felicidades, Campeón! 🎉
+      </h2>
+      <p class="text-lg text-slate-600 font-semibold">
+        Has completado todos los ejercicios de oraciones.
+      </p>
+
+      <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 w-full my-2">
+        <span class="text-slate-500 font-bold block text-base">Tu puntaje final es:</span>
+        <span id="final-score" class="text-5xl font-black text-amber-500 my-1 block">60 / 60</span>
+        <span id="final-stars" class="text-3xl">⭐⭐⭐⭐⭐</span>
+      </div>
+
+      <p id="final-message" class="text-brandBlue font-extrabold text-xl">
+        ¡Eres un súper lector y escritor! 🌟
+      </p>
+
+      <button onclick="restartGame()" class="btn-3d w-full py-4 bg-brandOrange hover:bg-orange-600 text-white font-black text-2xl rounded-2xl border-2 border-orange-700 mt-2">
+        🔄 Jugar de Nuevo
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-400 font-bold py-2">
+    Recurso Didáctico de Lectocomprensión e Interpretación - 1° Grado de Primaria
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Web Audio API Sound Effects Synthesizer for high compatibility
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+    }
+
+    function playSound(type) {
+      try {
+        initAudio();
+        if (!audioCtx) return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'pop') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'correct') {
+          // Play a happy 3-note melody (C5, E5, G5)
+          const notes = [523.25, 659.25, 783.99];
+          notes.forEach((freq, idx) => {
+            const noteOsc = audioCtx.createOscillator();
+            const noteGain = audioCtx.createGain();
+            noteOsc.type = 'triangle';
+            noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+            noteGain.gain.setValueAtTime(0.2, now + idx * 0.1);
+            noteGain.gain.linearRampToValueAtTime(0.01, now + idx * 0.1 + 0.2);
+            noteOsc.connect(noteGain);
+            noteGain.connect(audioCtx.destination);
+            noteOsc.start(now + idx * 0.1);
+            noteOsc.stop(now + idx * 0.1 + 0.25);
+          });
+        } else if (type === 'error') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'fanfare') {
+          const notes = [440, 554.37, 659.25, 880];
+          notes.forEach((freq, idx) => {
+            const noteOsc = audioCtx.createOscillator();
+            const noteGain = audioCtx.createGain();
+            noteOsc.type = 'sine';
+            noteOsc.frequency.setValueAtTime(freq, now + idx * 0.12);
+            noteGain.gain.setValueAtTime(0.3, now + idx * 0.12);
+            noteGain.gain.linearRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+            noteOsc.connect(noteGain);
+            noteGain.connect(audioCtx.destination);
+            noteOsc.start(now + idx * 0.12);
+            noteOsc.stop(now + idx * 0.12 + 0.35);
+          });
+        }
+      } catch (e) {
+        console.log("Audio play error:", e);
+      }
+    }
+
+    // Database of 30 First-Grade Spanish Sentences with custom inline SVG graphics
+    const RAW_EXERCISES = [
+      {
+        id: 1,
+        sentence: "El perro juega en el jardín.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20,60 Q30,40 50,40 Q70,40 80,60 Q90,80 50,90 Q10,80 20,60 Z" fill="#D97706"/><circle cx="35" cy="50" r="5" fill="#334155"/><circle cx="65" cy="50" r="5" fill="#334155"/><circle cx="50" cy="62" r="6" fill="#1E293B"/><path d="M45,72 Q50,78 55,72" stroke="#1E293B" stroke-width="3" fill="none"/><path d="M15,40 Q25,20 30,45" fill="#B45309"/><path d="M85,40 Q75,20 70,45" fill="#B45309"/><circle cx="50" cy="88" r="12" fill="#4ADE80"/></svg>`
+      },
+      {
+        id: 2,
+        sentence: "La gata toma su leche.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="25,20 40,40 20,45" fill="#F97316"/><polygon points="75,20 60,40 80,45" fill="#F97316"/><circle cx="50" cy="50" r="30" fill="#FB923C"/><circle cx="38" cy="45" r="4" fill="#0284C7"/><circle cx="62" cy="45" r="4" fill="#0284C7"/><polygon points="50,55 45,60 55,60" fill="#F43F5E"/><path d="M25,85 Q50,70 75,85 Z" fill="#E2E8F0"/><ellipse cx="50" cy="80" rx="20" ry="5" fill="#FFFFFF"/></svg>`
+      },
+      {
+        id: 3,
+        sentence: "El sol brilla en el cielo.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="25" fill="#FACC15"/><g stroke="#F59E0B" stroke-width="5" stroke-linecap="rounded"><line x1="50" y1="10" x2="50" y2="20"/><line x1="50" y1="80" x2="50" y2="90"/><line x1="10" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="90" y2="50"/><line x1="22" y1="22" x2="29" y2="29"/><line x1="71" y1="71" x2="78" y2="78"/><line x1="22" y1="78" x2="29" y2="71"/><line x1="71" y1="29" x2="78" y2="22"/></g><circle cx="42" cy="45" r="3" fill="#78350F"/><circle cx="58" cy="45" r="3" fill="#78350F"/><path d="M42,55 Q50,62 58,55" stroke="#78350F" stroke-width="3" fill="none"/></svg>`
+      },
+      {
+        id: 4,
+        sentence: "Mi mamá me quiere mucho.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50,25 C30,0 0,35 50,85 C100,35 70,0 50,25 Z" fill="#EC4899"/><circle cx="50" cy="40" r="15" fill="#FDE047" opacity="0.3"/><path d="M38,40 Q50,50 62,40" stroke="#FFFFFF" stroke-width="4" fill="none"/></svg>`
+      },
+      {
+        id: 5,
+        sentence: "El pájaro canta una canción.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20,60 Q50,20 80,60 Q50,80 20,60 Z" fill="#38BDF8"/><polygon points="75,55 90,50 80,65" fill="#F59E0B"/><circle cx="65" cy="48" r="4" fill="#0F172A"/><path d="M15,55 Q5,40 20,35" stroke="#0284C7" stroke-width="4" fill="none"/><text x="70" y="30" font-size="20" fill="#818CF8">🎵</text></svg>`
+      },
+      {
+        id: 6,
+        sentence: "La niña come una manzana roja.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="30" fill="#EF4444"/><path d="M50,25 Q55,15 65,20" stroke="#15803D" stroke-width="4" fill="none"/><path d="M50,25 Q40,15 35,22" fill="#22C55E"/><path d="M65,45 Q75,55 65,65 Q55,55 65,45" fill="#FEF08A"/><circle cx="40" cy="50" r="3" fill="#78350F"/></svg>`
+      },
+      {
+        id: 7,
+        sentence: "El oso come miel dulce.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="30" y="35" width="40" height="50" rx="10" fill="#F59E0B"/><rect x="25" y="25" width="50" height="15" rx="5" fill="#D97706"/><text x="36" y="65" font-size="16" font-weight="bold" fill="#78350F">MIEL</text><circle cx="70" cy="30" r="10" fill="#FACC15" opacity="0.8"/></svg>`
+      },
+      {
+        id: 8,
+        sentence: "Los niños juegan con la pelota.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="35" fill="#3B82F6"/><path d="M15,50 A35,35 0 0,0 85,50 Z" fill="#EF4444"/><path d="M50,15 A35,35 0 0,0 50,85 Z" fill="#FACC15"/><circle cx="50" cy="50" r="35" stroke="#FFFFFF" stroke-width="4" fill="none"/></svg>`
+      },
+      {
+        id: 9,
+        sentence: "La mariposa vuela alto.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="30" cy="35" rx="20" ry="25" fill="#EC4899"/><ellipse cx="70" cy="35" rx="20" ry="25" fill="#EC4899"/><ellipse cx="35" cy="70" rx="15" ry="20" fill="#A855F7"/><ellipse cx="65" cy="70" rx="15" ry="20" fill="#A855F7"/><rect x="47" y="20" width="6" height="60" rx="3" fill="#1E293B"/><circle cx="50" cy="18" r="5" fill="#1E293B"/></svg>`
+      },
+      {
+        id: 10,
+        sentence: "El pez nada en el agua.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="45" cy="50" rx="30" ry="20" fill="#F97316"/><polygon points="70,50 90,35 90,65" fill="#EA580C"/><circle cx="30" cy="45" r="4" fill="#1E293B"/><circle cx="18" cy="30" r="5" fill="#93C5FD" opacity="0.7"/><circle cx="10" cy="20" r="3" fill="#93C5FD" opacity="0.7"/></svg>`
+      },
+      {
+        id: 11,
+        sentence: "El coche azul corre rápido.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15,60 L25,40 L65,40 L85,60 Z" fill="#2563EB"/><rect x="10" y="55" width="80" height="20" rx="5" fill="#3B82F6"/><circle cx="30" cy="75" r="10" fill="#1E293B"/><circle cx="30" cy="75" r="4" fill="#94A3B8"/><circle cx="70" cy="75" r="10" fill="#1E293B"/><circle cx="70" cy="75" r="4" fill="#94A3B8"/></svg>`
+      },
+      {
+        id: 12,
+        sentence: "La flor rosa es muy bonita.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="30" r="14" fill="#F43F5E"/><circle cx="30" cy="50" r="14" fill="#F43F5E"/><circle cx="70" cy="50" r="14" fill="#F43F5E"/><circle cx="50" cy="70" r="14" fill="#F43F5E"/><circle cx="50" cy="50" r="15" fill="#FACC15"/><line x1="50" y1="65" x2="50" y2="95" stroke="#22C55E" stroke-width="6"/></svg>`
+      },
+      {
+        id: 13,
+        sentence: "El conejo salta muy alto.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="38" cy="25" rx="7" ry="20" fill="#E2E8F0"/><ellipse cx="62" cy="25" rx="7" ry="20" fill="#E2E8F0"/><circle cx="50" cy="55" r="25" fill="#F8FAFC"/><circle cx="42" cy="50" r="3" fill="#0F172A"/><circle cx="58" cy="50" r="3" fill="#0F172A"/><polygon points="50,57 46,62 54,62" fill="#F43F5E"/></svg>`
+      },
+      {
+        id: 14,
+        sentence: "Me gusta comer helado.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="50,90 30,50 70,50" fill="#D97706"/><circle cx="50" cy="42" r="18" fill="#EC4899"/><circle cx="40" cy="35" r="14" fill="#38BDF8"/><circle cx="60" cy="35" r="14" fill="#FACC15"/><circle cx="50" cy="20" r="6" fill="#EF4444"/></svg>`
+      },
+      {
+        id: 15,
+        sentence: "El pato nada en el lago.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M30,60 Q30,85 60,85 Q85,85 85,60 Q85,50 65,50 L65,35 A12,12 0 1,0 41,35 L41,50 Q30,50 30,60 Z" fill="#FACC15"/><polygon points="35,30 15,35 35,40" fill="#F97316"/><circle cx="45" cy="28" r="3" fill="#0F172A"/></svg>`
+      },
+      {
+        id: 16,
+        sentence: "La estrella brilla de noche.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="50,10 63,38 93,38 69,56 78,86 50,68 22,86 31,56 7,38 37,38" fill="#FACC15" stroke="#F59E0B" stroke-width="2"/><circle cx="43" cy="45" r="3" fill="#78350F"/><circle cx="57" cy="45" r="3" fill="#78350F"/><path d="M44,53 Q50,58 56,53" stroke="#78350F" stroke-width="2" fill="none"/></svg>`
+      },
+      {
+        id: 17,
+        sentence: "El libro tiene muchos dibujos.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="20" width="35" height="60" rx="3" fill="#38BDF8"/><rect x="50" y="20" width="35" height="60" rx="3" fill="#7DD3FC"/><path d="M50,20 L50,80" stroke="#0284C7" stroke-width="4"/><circle cx="32" cy="40" r="8" fill="#FACC15"/><polygon points="65,35 75,55 55,55" fill="#4ADE80"/></svg>`
+      },
+      {
+        id: 18,
+        sentence: "La vaca da leche fresca.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="30" ry="25" fill="#F8FAFC"/><circle cx="35" cy="45" r="8" fill="#1E293B"/><circle cx="60" cy="65" r="10" fill="#1E293B"/><ellipse cx="50" cy="65" rx="15" ry="10" fill="#FBCFE8"/><circle cx="44" cy="63" r="2" fill="#1E293B"/><circle cx="56" cy="63" r="2" fill="#1E293B"/></svg>`
+      },
+      {
+        id: 19,
+        sentence: "El ratón come un queso.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="20,75 80,75 60,35" fill="#FACC15"/><circle cx="40" cy="65" r="5" fill="#F59E0B"/><circle cx="60" cy="60" r="4" fill="#F59E0B"/><circle cx="50" cy="48" r="3" fill="#F59E0B"/></svg>`
+      },
+      {
+        id: 20,
+        sentence: "El avión vuela sobre el mar.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M10,50 Q40,40 85,45 Q95,50 85,55 Q40,60 10,50 Z" fill="#E2E8F0"/><polygon points="45,47 30,15 50,47" fill="#CBD5E1"/><polygon points="45,53 30,85 50,53" fill="#CBD5E1"/></svg>`
+      },
+      {
+        id: 21,
+        sentence: "El árbol tiene hojas verdes.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="42" y="50" width="16" height="40" rx="4" fill="#854D0E"/><circle cx="50" cy="40" r="28" fill="#22C55E"/><circle cx="35" cy="45" r="20" fill="#16A34A"/><circle cx="65" cy="45" r="20" fill="#15803D"/></svg>`
+      },
+      {
+        id: 22,
+        sentence: "La luna ilumina la noche.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M60,15 A35,35 0 1,0 85,70 A30,30 0 1,1 60,15 Z" fill="#FDE047"/><text x="15" y="35" font-size="14" fill="#FFFFFF">✨</text><text x="65" y="85" font-size="14" fill="#FFFFFF">✨</text></svg>`
+      },
+      {
+        id: 23,
+        sentence: "El niño lee un cuento divertido.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="35" r="18" fill="#FED7AA"/><path d="M32,25 Q50,10 68,25" fill="#78350F"/><rect x="30" y="60" width="40" height="25" rx="4" fill="#A855F7"/><line x1="50" y1="60" x2="50" y2="85" stroke="#FFFFFF" stroke-width="2"/></svg>`
+      },
+      {
+        id: 24,
+        sentence: "La tortuga camina despacio.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="30" ry="20" fill="#15803D"/><circle cx="20" cy="55" r="10" fill="#4ADE80"/><circle cx="35" cy="72" r="6" fill="#16A34A"/><circle cx="65" cy="72" r="6" fill="#16A34A"/><circle cx="17" cy="52" r="2" fill="#0F172A"/></svg>`
+      },
+      {
+        id: 25,
+        sentence: "El elefante es muy grande.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="55" cy="50" r="30" fill="#94A3B8"/><circle cx="25" cy="40" r="14" fill="#64748B"/><path d="M30,55 Q15,60 20,80" stroke="#94A3B8" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`
+      },
+      {
+        id: 26,
+        sentence: "La abeja produce miel rica.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="25" ry="18" fill="#FACC15"/><line x1="42" y1="38" x2="42" y2="72" stroke="#0F172A" stroke-width="5"/><line x1="58" y1="38" x2="58" y2="72" stroke="#0F172A" stroke-width="5"/><ellipse cx="40" cy="30" rx="8" ry="15" fill="#E0F2FE" opacity="0.8"/><ellipse cx="60" cy="30" rx="8" ry="15" fill="#E0F2FE" opacity="0.8"/></svg>`
+      },
+      {
+        id: 27,
+        sentence: "El león corre en la selva.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="32" fill="#D97706"/><circle cx="50" cy="50" r="22" fill="#F2994A"/><circle cx="42" cy="45" r="3" fill="#1E293B"/><circle cx="58" cy="45" r="3" fill="#1E293B"/><polygon points="50,52 45,58 55,58" fill="#78350F"/></svg>`
+      },
+      {
+        id: 28,
+        sentence: "La pelota salta muy alto.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="30" fill="#EC4899"/><path d="M20,50 Q50,20 80,50 Q50,80 20,50 Z" fill="#FACC15"/></svg>`
+      },
+      {
+        id: 29,
+        sentence: "El barco navega en el río.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20,60 L80,60 L70,80 L30,80 Z" fill="#854D0E"/><polygon points="50,20 50,55 25,55" fill="#EF4444"/><line x1="50" y1="15" x2="50" y2="60" stroke="#1E293B" stroke-width="4"/></svg>`
+      },
+      {
+        id: 30,
+        sentence: "La maestra enseña con amor.",
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="20" width="70" height="45" rx="5" fill="#1E293B"/><rect x="20" y="25" width="60" height="35" fill="#065F46"/><text x="25" y="48" font-size="16" fill="#FFFFFF" font-weight="bold">A B C ❤️</text></svg>`
+      }
+    ];
+
+    // Color palettes for word badges
+    const WORD_COLORS = [
+      'bg-red-100 text-red-800 border-red-300 hover:bg-red-200',
+      'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200',
+      'bg-green-100 text-green-800 border-green-300 hover:bg-green-200',
+      'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200',
+      'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200',
+      'bg-pink-100 text-pink-800 border-pink-300 hover:bg-pink-200',
+      'bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200',
+      'bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-200'
+    ];
+
+    let exercises = [];
+    let currentIndex = 0;
+    let score = 0;
+    let draggedElement = null;
+    let currentValidated = false;
+
+    // Helper: Fisher-Yates array shuffle function
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Initialize Game
+    function initGame() {
+      // REQUIREMENT: Shuffle 30 exercises so every computer gets a different order!
+      exercises = shuffleArray(RAW_EXERCISES);
+      currentIndex = 0;
+      score = 0;
+      updateScoreUI();
+      loadExercise(currentIndex);
+    }
+
+    // Load Exercise Slide
+    function loadExercise(index) {
+      currentValidated = false;
+      const currentEx = exercises[index];
+
+      // Update counters
+      document.getElementById('current-question-num').textContent = index + 1;
+      const progressPercent = ((index) / 30) * 100;
+      document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+      // Update illustration
+      document.getElementById('illustration-container').innerHTML = currentEx.svg;
+
+      // Reset feedback and buttons
+      const feedbackBanner = document.getElementById('feedback-banner');
+      feedbackBanner.className = "hidden p-4 rounded-2xl text-center font-extrabold text-xl sm:text-2xl animate-pop border-2";
+      feedbackBanner.textContent = "";
+
+      const validateBtn = document.getElementById('validate-btn');
+      validateBtn.disabled = false;
+      validateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+      // Clear zones
+      const targetZone = document.getElementById('target-zone');
+      const sourceZone = document.getElementById('source-zone');
+      
+      targetZone.innerHTML = `<p id="placeholder-text" class="text-slate-400 font-semibold text-base sm:text-xl pointer-events-none italic">Pon las palabras aquí en orden... 🧩</p>`;
+      sourceZone.innerHTML = '';
+
+      // Prepare Scrambled Words
+      // Split words while preserving punctuation attached to words
+      const words = currentEx.sentence.split(' ');
+      
+      // Shuffle words until they don't match the original exact order (if > 1 word)
+      let scrambled = shuffleArray(words);
+      if (words.length > 1) {
+        let attempts = 0;
+        while (scrambled.join(' ') === currentEx.sentence && attempts < 10) {
+          scrambled = shuffleArray(words);
+          attempts++;
+        }
+      }
+
+      // Render scrambled words in Source Zone
+      scrambled.forEach((wordText, i) => {
+        const colorClass = WORD_COLORS[i % WORD_COLORS.length];
+        const wordCard = createWordCard(wordText, colorClass, `word-${i}`);
+        sourceZone.appendChild(wordCard);
+      });
+
+      // Setup Drop Area Drag/Drop Event Listeners
+      setupZoneEvents(targetZone);
+      setupZoneEvents(sourceZone);
+    }
+
+    // Create Word Token Element
+    function createWordCard(text, colorClass, uniqueId) {
+      const card = document.createElement('div');
+      card.id = uniqueId;
+      card.draggable = true;
+      card.textContent = text;
+      card.className = `word-card ${colorClass} px-4 py-2.5 sm:px-6 sm:py-3 rounded-2xl text-xl sm:text-3xl font-extrabold border-3 cursor-grab active:cursor-grabbing select-none flex items-center justify-center transform hover:scale-105`;
+
+      // Click / Tap Handler (Alternative to drag for young children)
+      card.addEventListener('click', () => {
+        if (currentValidated) return;
+        playSound('pop');
+        
+        const parent = card.parentElement;
+        const targetZone = document.getElementById('target-zone');
+        const sourceZone = document.getElementById('source-zone');
+
+        if (parent.id === 'source-zone') {
+          // Move from source to target
+          removePlaceholder();
+          targetZone.appendChild(card);
+        } else {
+          // Move back to source
+          sourceZone.appendChild(card);
+          checkPlaceholder();
+        }
+      });
+
+      // HTML5 Drag Events
+      card.addEventListener('dragstart', (e) => {
+        if (currentValidated) {
+          e.preventDefault();
+          return;
+        }
+        draggedElement = card;
+        card.classList.add('opacity-40', 'scale-95');
+        e.dataTransfer.setData('text/plain', card.id);
+        playSound('pop');
+      });
+
+      card.addEventListener('dragend', () => {
+        draggedElement = null;
+        card.classList.remove('opacity-40', 'scale-95');
+      });
+
+      return card;
+    }
+
+    // Setup Drop Zones
+    function setupZoneEvents(zone) {
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+      });
+
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('drag-over');
+      });
+
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (draggedElement && !currentValidated) {
+          if (zone.id === 'target-zone') {
+            removePlaceholder();
+          }
+          zone.appendChild(draggedElement);
+          checkPlaceholder();
+          playSound('pop');
+        }
+      });
+    }
+
+    function removePlaceholder() {
+      const placeholder = document.getElementById('placeholder-text');
+      if (placeholder) placeholder.style.display = 'none';
+    }
+
+    function checkPlaceholder() {
+      const targetZone = document.getElementById('target-zone');
+      const placeholder = document.getElementById('placeholder-text');
+      const cards = targetZone.querySelectorAll('.word-card');
+      if (cards.length === 0 && placeholder) {
+        placeholder.style.display = 'block';
+      }
+    }
+
+    // Reset Sentence (Move all words back to source bank)
+    function resetCurrentSentence() {
+      if (currentValidated) return;
+      playSound('pop');
+      const targetZone = document.getElementById('target-zone');
+      const sourceZone = document.getElementById('source-zone');
+      const cards = Array.from(targetZone.querySelectorAll('.word-card'));
+
+      cards.forEach(card => {
+        sourceZone.appendChild(card);
+      });
+      checkPlaceholder();
+    }
+
+    // Validate Current Answer
+    function validateAnswer() {
+      if (currentValidated) return;
+
+      const currentEx = exercises[currentIndex];
+      const targetZone = document.getElementById('target-zone');
+      const placedCards = Array.from(targetZone.querySelectorAll('.word-card'));
+      const formedSentence = placedCards.map(c => c.textContent.trim()).join(' ');
+
+      const feedbackBanner = document.getElementById('feedback-banner');
+      feedbackBanner.classList.remove('hidden');
+
+      if (formedSentence === currentEx.sentence) {
+        // CORRECT ANSWER
+        currentValidated = true;
+        score += 2; // 2 points per correct sentence as requested
+        updateScoreUI();
+        playSound('correct');
+
+        // Launch celebratory confetti
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+
+        feedbackBanner.className = "p-4 rounded-2xl text-center font-extrabold text-xl sm:text-2xl animate-pop bg-emerald-100 text-emerald-800 border-emerald-400";
+        feedbackBanner.innerHTML = "🎉 ¡Excelente! Formaste la oración correctamente (+2 puntos)";
+
+        // Lock buttons
+        document.getElementById('validate-btn').disabled = true;
+        document.getElementById('validate-btn').classList.add('opacity-50', 'cursor-not-allowed');
+
+      } else {
+        // INCORRECT ANSWER
+        playSound('error');
+        feedbackBanner.className = "p-4 rounded-2xl text-center font-extrabold text-xl sm:text-2xl animate-pop bg-rose-100 text-rose-800 border-rose-400";
+        
+        if (placedCards.length === 0) {
+          feedbackBanner.innerHTML = "⚠️ ¡Arrastra o toca algunas palabras para armar la oración!";
+        } else {
+          feedbackBanner.innerHTML = "❌ ¡Casi! Revisa el orden de las palabras e inténtalo de nuevo.";
+        }
+      }
+    }
+
+    // Update Score Board UI
+    function updateScoreUI() {
+      const scoreDisplay = document.getElementById('score-display');
+      scoreDisplay.textContent = score;
+    }
+
+    // Navigate to Next Exercise
+    function nextExercise() {
+      playSound('pop');
+      if (currentIndex < exercises.length - 1) {
+        currentIndex++;
+        loadExercise(currentIndex);
+      } else {
+        // Completed all 30 exercises!
+        showFinalResults();
+      }
+    }
+
+    // Show Final Completion Screen
+    function showFinalResults() {
+      playSound('fanfare');
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.5 }
+      });
+
+      document.getElementById('final-score').textContent = `${score} / 60`;
+      
+      let stars = "⭐⭐⭐⭐⭐";
+      let msg = "¡Eres un superhéroe de las oraciones! 🌟";
+
+      if (score < 40) {
+        stars = "⭐⭐⭐";
+        msg = "¡Buen intento! Puedes practicar una vez más para mejorar. 💪";
+      } else if (score < 55) {
+        stars = "⭐⭐⭐⭐";
+        msg = "¡Muy buen trabajo! Casi un puntaje perfecto. 👏";
+      }
+
+      document.getElementById('final-stars').textContent = stars;
+      document.getElementById('final-message').textContent = msg;
+
+      document.getElementById('results-modal').classList.remove('hidden');
+    }
+
+    // Restart Game
+    function restartGame() {
+      document.getElementById('results-modal').classList.add('hidden');
+      initGame();
+    }
+
+    // Initialize Game on Window Load
+    window.onload = function() {
+      initGame();
+    };
+  </script>
+</body>
+</html>
